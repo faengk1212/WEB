@@ -33,18 +33,17 @@
 
         /* Grid */
         .product-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .product-card { background: var(--surface); border-radius: 20px; padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; }
+        .product-card { background: var(--surface); border-radius: 20px; padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; position: relative; }
         .product-img { width: 100%; height: 110px; object-fit: cover; border-radius: 14px; margin-bottom: 10px; background: #334155; }
         .product-name { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
         .product-footer { display: flex; justify-content: space-between; align-items: center; }
         .product-price { color: var(--accent); font-weight: 700; font-size: 14px; }
         .btn-add { background: var(--accent); color: var(--bg); border: none; width: 32px; height: 32px; border-radius: 10px; font-weight: 800; cursor: pointer; }
 
-        /* Admin & Forms (อัปเดตแก้ปัญหาหน้าจอดำ) */
+        /* Admin & Forms */
         .admin-card { background: var(--surface); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 16px; }
         .admin-input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px; border: 1px solid var(--border); background: #0F172A; color: white; font-size: 14px; outline: none; }
         
-        /* แก้ไข Select Box (หมวดหมู่) */
         .admin-select { 
             -webkit-appearance: none; 
             appearance: none; 
@@ -60,7 +59,6 @@
         }
         .admin-select option { background: #1E293B; color: #FFFFFF; }
 
-        /* แก้ไขปุ่มเลือกไฟล์รูปภาพ */
         input[type="file"] { color: var(--text-secondary); padding: 8px; }
         input[type="file"]::file-selector-button {
             background: var(--surface);
@@ -76,15 +74,19 @@
         .btn-action { background: var(--accent); color: var(--bg); border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; margin-bottom: 12px; }
         .btn-danger { background: var(--danger); color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; }
         
-        /* Category Management List */
         .cat-manage-item { display: flex; justify-content: space-between; align-items: center; background: #0F172A; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); font-size: 14px; font-weight: 600; }
         .btn-del-cat { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+        /* Product Management List in Admin */
+        .prod-manage-item { display: flex; justify-content: space-between; align-items: center; background: #0F172A; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); font-size: 13px; }
+        .prod-info { display: flex; align-items: center; gap: 10px; overflow: hidden; }
+        .prod-thumb { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; background: #334155; flex-shrink: 0; }
 
         /* Cart & Profile */
         .cart-item { background: var(--surface); padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border: 1px solid var(--border); }
         .btn-checkout { background: var(--accent); color: var(--bg); border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 700; margin-top: 20px; cursor: pointer; }
 
-        /* Bottom Nav (คงเหลือชั้นเดียว) */
+        /* Bottom Nav */
         nav.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); display: flex; padding: 12px 0 20px 0; justify-content: space-around; border-top: 1px solid var(--border); z-index: 100; }
         .nav-item { background: none; border: none; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; font-size: 11px; gap: 4px; padding: 5px; cursor: pointer; font-weight: 500; }
         .nav-item.active { color: var(--accent); font-weight: 700; }
@@ -149,6 +151,11 @@
             <button class="btn-action" onclick="addNewProduct()" style="margin-top: 10px;">บันทึกเพิ่มสินค้า</button>
         </div>
 
+        <div class="admin-card">
+            <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--accent);">🗑️ จัดการรายการสินค้า (ลบสินค้า)</h3>
+            <div id="product-management-list"></div>
+        </div>
+
         <button class="btn-danger" onclick="resetData()">รีเซ็ตค่าเริ่มต้นทั้งหมด</button>
     </div>
 
@@ -183,7 +190,9 @@
         let currentCategory = 'All';
 
         let user = tg.initDataUnsafe.user;
-        if (user && user.id === ADMIN_USER_ID) {
+        let isAdmin = (user && user.id === ADMIN_USER_ID);
+
+        if (isAdmin) {
             document.getElementById('header-admin-icon').style.display = 'block';
             document.getElementById('bottom-nav').innerHTML += `
                 <button class="nav-item" id="nav-admin-btn" onclick="switchTab('admin', this)">
@@ -252,6 +261,7 @@
 
                 renderCategories();
                 renderProducts();
+                renderAdminProducts();
                 tg.HapticFeedback.notificationOccurred('success');
             }
         }
@@ -282,6 +292,48 @@
             `).join('');
         }
 
+        function renderAdminProducts() {
+            const manageList = document.getElementById('product-management-list');
+            if (!manageList) return;
+
+            if (products.length === 0) {
+                manageList.innerHTML = `<p style="color:var(--text-secondary); text-align:center; font-size:13px;">ไม่มีสินค้าในระบบ</p>`;
+                return;
+            }
+
+            manageList.innerHTML = products.map(p => `
+                <div class="prod-manage-item">
+                    <div class="prod-info">
+                        <img src="${p.image || 'https://via.placeholder.com/100'}" class="prod-thumb">
+                        <div>
+                            <div style="font-weight:600; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px;">${p.name}</div>
+                            <div style="color:var(--accent); font-size:12px;">${p.price} ฿ (${p.category})</div>
+                        </div>
+                    </div>
+                    <button class="btn-del-cat" onclick="deleteProduct(${p.id})">ลบ</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteProduct(id) {
+            let target = products.find(p => p.id === id);
+            if (!target) return;
+
+            if (confirm(`คุณต้องการลบสินค้า "${target.name}" ใช่หรือไม่?`)) {
+                products = products.filter(p => p.id !== id);
+                localStorage.setItem('bkk_products', JSON.stringify(products));
+                
+                if (cart[id]) {
+                    delete cart[id];
+                    updateCartUI();
+                }
+
+                renderProducts();
+                renderAdminProducts();
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+        }
+
         function addNewProduct() {
             let name = document.getElementById('new-name').value;
             let price = Number(document.getElementById('new-price').value);
@@ -299,77 +351,363 @@
                 document.getElementById('new-price').value = '';
                 document.getElementById('new-image-file').value = '';
                 renderProducts();
+                renderAdminProducts();
                 tg.HapticFeedback.notificationOccurred('success');
                 alert("เพิ่มสินค้าสำเร็จ!");
-                switchTab('catalog', document.querySelectorAll('.nav-item')[0]);
-            };
+      <!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>BKKPODTH Store</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0F172A;
+            --surface: #1E293B;
+            --text-main: #FFFFFF;
+            --text-secondary: #94A3B8;
+            --accent: #38BDF8;
+            --danger: #EF4444;
+            --border: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-            if (fileInput.files && fileInput.files[0]) {
-                let reader = new FileReader();
-                reader.onload = (e) => save(e.target.result);
-                reader.readAsDataURL(fileInput.files[0]);
-            } else {
-                save("");
-            }
+        header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface); }
+        .header-title { font-size: 18px; font-weight: 800; }
+
+        .main-content { flex: 1; overflow-y: auto; padding: 20px; display: none; padding-bottom: 90px; }
+        .main-content.active { display: block; }
+        .section-title { font-size: 18px; margin-bottom: 16px; font-weight: 700; }
+
+        /* Category Filter Pills */
+        .category-filter { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 16px; }
+        .filter-pill { background: var(--surface); border: 1px solid var(--border); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; color: var(--text-secondary); }
+        .filter-pill.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+        /* Grid */
+        .product-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .product-card { background: var(--surface); border-radius: 20px; padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        .product-img { width: 100%; height: 110px; object-fit: cover; border-radius: 14px; margin-bottom: 10px; background: #334155; }
+        .product-name { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+        .product-footer { display: flex; justify-content: space-between; align-items: center; }
+        .product-price { color: var(--accent); font-weight: 700; font-size: 14px; }
+        .btn-add { background: var(--accent); color: var(--bg); border: none; width: 32px; height: 32px; border-radius: 10px; font-weight: 800; cursor: pointer; }
+
+        /* Admin & Forms */
+        .admin-card { background: var(--surface); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 16px; }
+        .admin-input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px; border: 1px solid var(--border); background: #0F172A; color: white; font-size: 14px; outline: none; }
+        
+        .admin-select { 
+            -webkit-appearance: none; 
+            appearance: none; 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 12px; 
+            border-radius: 10px; 
+            border: 1px solid var(--border); 
+            background: #0F172A url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>") no-repeat right 12px center; 
+            background-size: 20px;
+            color: #FFFFFF; 
+            font-size: 14px; 
+        }
+        .admin-select option { background: #1E293B; color: #FFFFFF; }
+
+        input[type="file"] { color: var(--text-secondary); padding: 8px; }
+        input[type="file"]::file-selector-button {
+            background: var(--surface);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-right: 12px;
+            font-weight: 600;
         }
 
-        function addToCart(id) {
-            cart[id] = (cart[id] || 0) + 1;
-            tg.HapticFeedback.impactOccurred('medium');
-            updateCartUI();
+        .btn-action { background: var(--accent); color: var(--bg); border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; margin-bottom: 12px; }
+        .btn-danger { background: var(--danger); color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+        
+        .cat-manage-item { display: flex; justify-content: space-between; align-items: center; background: #0F172A; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); font-size: 14px; font-weight: 600; }
+        .btn-del-cat { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+        /* Product Management List in Admin */
+        .prod-manage-item { display: flex; justify-content: space-between; align-items: center; background: #0F172A; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); font-size: 13px; }
+        .prod-info { display: flex; align-items: center; gap: 10px; overflow: hidden; }
+        .prod-thumb { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; background: #334155; flex-shrink: 0; }
+
+        /* Cart & Profile */
+        .cart-item { background: var(--surface); padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border: 1px solid var(--border); }
+        .btn-checkout { background: var(--accent); color: var(--bg); border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 700; margin-top: 20px; cursor: pointer; }
+
+        /* Bottom Nav */
+        nav.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); display: flex; padding: 12px 0 20px 0; justify-content: space-around; border-top: 1px solid var(--border); z-index: 100; }
+        .nav-item { background: none; border: none; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; font-size: 11px; gap: 4px; padding: 5px; cursor: pointer; font-weight: 500; }
+        .nav-item.active { color: var(--accent); font-weight: 700; }
+        .nav-item svg { width: 22px; height: 22px; fill: currentColor; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <span class="header-title">BKKPODTH Store</span>
+        <span id="header-admin-icon" style="display:none; cursor:pointer; font-size:18px;" onclick="switchTab('admin', document.getElementById('nav-admin-btn'))">⚙️</span>
+    </header>
+
+    <!-- 1. Catalog -->
+    <div id="tab-catalog" class="main-content active">
+        <div id="category-filter-container" class="category-filter">
+            <button class="filter-pill active" onclick="filterCategory('All', this)">ทั้งหมด</button>
+        </div>
+        <div id="product-grid" class="product-grid"></div>
+    </div>
+
+    <!-- 2. Cart -->
+    <div id="tab-cart" class="main-content">
+        <h1 class="section-title">ตะกร้าสินค้า</h1>
+        <div id="cart-items-container">
+            <p style="color: var(--text-secondary); text-align: center; margin-top: 40px;">ตะกร้าสินค้าว่างเปล่า</p>
+        </div>
+        <div id="cart-summary" style="display: none;">
+            <div style="display:flex; justify-content:space-between; font-weight:700; font-size:16px; margin-top:15px;">
+                <span>ยอดรวมทั้งสิ้น:</span>
+                <span id="total-price" style="color: var(--accent);">0 ฿</span>
+            </div>
+            <button class="btn-checkout" onclick="checkout()">ยืนยันการสั่งซื้อ</button>
+        </div>
+    </div>
+
+    <!-- 3. Profile -->
+    <div id="tab-profile" class="main-content">
+        <h1 class="section-title">โปรไฟล์</h1>
+        <div class="admin-card">
+            <p id="user-profile-info" style="color: var(--text-secondary); line-height: 1.6;">กำลังโหลด...</p>
+        </div>
+    </div>
+
+    <!-- 4. Admin Panel -->
+    <div id="tab-admin" class="main-content">
+        <h1 class="section-title">Admin Panel</h1>
+        
+        <div class="admin-card">
+            <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--accent);">🏷️ จัดการหมวดหมู่</h3>
+            <input type="text" id="new-category-name" class="admin-input" placeholder="ชื่อหมวดหมู่ใหม่ เช่น Snack">
+            <button class="btn-action" onclick="addNewCategory()">+ เพิ่มหมวดหมู่</button>
+            <div id="category-management-list" style="margin-top: 10px;"></div>
+        </div>
+
+        <div class="admin-card">
+            <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--accent);">➕ เพิ่มสินค้าใหม่</h3>
+            <input type="text" id="new-name" class="admin-input" placeholder="ชื่อสินค้า">
+            <input type="number" id="new-price" class="admin-input" placeholder="ราคา (บาท)">
+            <select id="new-category" class="admin-select"></select>
+            <input type="file" id="new-image-file" class="admin-input" accept="image/*">
+            <button class="btn-action" onclick="addNewProduct()" style="margin-top: 10px;">บันทึกเพิ่มสินค้า</button>
+        </div>
+
+        <div class="admin-card">
+            <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--accent);">🗑️ จัดการรายการสินค้า (ลบสินค้า)</h3>
+            <div id="product-management-list"></div>
+        </div>
+
+        <button class="btn-danger" onclick="resetData()">รีเซ็ตค่าเริ่มต้นทั้งหมด</button>
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav" id="bottom-nav">
+        <button class="nav-item active" onclick="switchTab('catalog', this)">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Shop
+        </button>
+        <button class="nav-item" onclick="switchTab('cart', this)">
+            <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>Cart
+        </button>
+        <button class="nav-item" onclick="switchTab('profile', this)">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>Profile
+        </button>
+    </nav>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.ready(); tg.expand();
+
+        const ADMIN_USER_ID = 5055497784;
+
+        const defaultCategories = ["Coffee", "Beverage", "Bakery"];
+        const defaultProducts = [
+            { id: 1, name: "Premium Coffee", price: 55, category: "Coffee", image: "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=300" },
+            { id: 2, name: "Matcha Latte", price: 75, category: "Beverage", image: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=300" }
+        ];
+
+        let categories = JSON.parse(localStorage.getItem('bkk_categories')) || defaultCategories;
+        let products = JSON.parse(localStorage.getItem('bkk_products')) || defaultProducts;
+        let cart = {};
+        let currentCategory = 'All';
+
+        let user = tg.initDataUnsafe.user;
+        let isAdmin = (user && user.id === ADMIN_USER_ID);
+
+        if (isAdmin) {
+            document.getElementById('header-admin-icon').style.display = 'block';
+            document.getElementById('bottom-nav').innerHTML += `
+                <button class="nav-item" id="nav-admin-btn" onclick="switchTab('admin', this)">
+                    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.04.64.09.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c-.5.38-1.03.7-1.62.94l.36 2.54c-.05.24.24.41.48.41h3.84c-.24 0 .44-.17.47-.41l.36-2.54c-.59-.24-1.13-.56-1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c-.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Admin
+                </button>
+            `;
         }
 
-        function updateCartUI() {
-            const container = document.getElementById('cart-items-container');
-            const summary = document.getElementById('cart-summary');
-            let total = 0, hasItem = false;
-
-            container.innerHTML = Object.keys(cart).map(id => {
-                if (cart[id] > 0) {
-                    hasItem = true;
-                    let p = products.find(x => x.id == id);
-                    if(!p) return '';
-                    let sub = p.price * cart[id];
-                    total += sub;
-                    return `<div class="cart-item"><div><b style="color:white;">${p.name}</b><br><span style="font-size:12px;color:var(--text-secondary);">${p.price} x ${cart[id]}</span></div><b style="color:var(--accent);">${sub} ฿</b></div>`;
-                }
-                return '';
-            }).join('');
-
-            if (!hasItem) {
-                container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; margin-top: 40px;">ตะกร้าสินค้าว่างเปล่า</p>`;
-                summary.style.display = 'none';
-            } else {
-                summary.style.display = 'block';
-                document.getElementById('total-price').innerText = total + " ฿";
-            }
+        if (user) {
+            document.getElementById("user-profile-info").innerHTML = `ชื่อ: <b style="color:white;">${user.first_name}</b><br>Username: @${user.username || 'ไม่มี'}<br>ID: ${user.id}`;
+        } else {
+            document.getElementById("user-profile-info").innerText = "เปิดใช้งานภายนอก Telegram";
         }
 
-        function checkout() {
+        function renderCategories() {
+            const filterContainer = document.getElementById('category-filter-container');
+            filterContainer.innerHTML = `<button class="filter-pill ${currentCategory === 'All' ? 'active' : ''}" onclick="filterCategory('All', this)">ทั้งหมด</button>`;
+            
+            categories.forEach(cat => {
+                filterContainer.innerHTML += `<button class="filter-pill ${currentCategory === cat ? 'active' : ''}" onclick="filterCategory('${cat}', this)">${cat}</button>`;
+            });
+
+            const selectContainer = document.getElementById('new-category');
+            selectContainer.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+
+            const manageList = document.getElementById('category-management-list');
+            manageList.innerHTML = categories.map(cat => `
+                <div class="cat-manage-item">
+                    <span>${cat}</span>
+                    <button class="btn-del-cat" onclick="deleteCategory('${cat}')">ลบ</button>
+                </div>
+            `).join('');
+        }
+
+        function addNewCategory() {
+            let catName = document.getElementById('new-category-name').value.trim();
+            if (!catName) return alert("กรุณากรอกชื่อหมวดหมู่");
+            if (categories.includes(catName)) return alert("มีหมวดหมู่นี้อยู่แล้ว");
+
+            categories.push(catName);
+            localStorage.setItem('bkk_categories', JSON.stringify(categories));
+            document.getElementById('new-category-name').value = '';
+            renderCategories();
             tg.HapticFeedback.notificationOccurred('success');
-            tg.showAlert("สั่งซื้อสำเร็จ! (นี่คือระบบจำลอง)");
-            cart = {};
-            updateCartUI();
-            switchTab('catalog', document.querySelectorAll('.nav-item')[0]);
+            alert("เพิ่มหมวดหมู่สำเร็จ!");
         }
 
-        function resetData() {
-            if(confirm("รีเซ็ตข้อมูลทั้งหมด?")) {
-                localStorage.removeItem('bkk_products');
-                localStorage.removeItem('bkk_categories');
-                location.reload();
+        function deleteCategory(catName) {
+            if (categories.length <= 1) {
+                return alert("ต้องเหลือหมวดหมู่อย่างน้อย 1 หมวดหมู่");
+            }
+            if (confirm(`คุณต้องการลบหมวดหมู่ "${catName}" ใช่หรือไม่?`)) {
+                categories = categories.filter(c => c !== catName);
+                localStorage.setItem('bkk_categories', JSON.stringify(categories));
+
+                products.forEach(p => {
+                    if (p.category === catName) {
+                        p.category = categories[0];
+                    }
+                });
+                localStorage.setItem('bkk_products', JSON.stringify(products));
+
+                if (currentCategory === catName) {
+                    currentCategory = 'All';
+                }
+
+                renderCategories();
+                renderProducts();
+                renderAdminProducts();
+                tg.HapticFeedback.notificationOccurred('success');
             }
         }
 
-        function switchTab(tab, el) {
-            document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('tab-' + tab).classList.add('active');
-            if(el) el.classList.add('active');
+        function filterCategory(category, element) {
+            currentCategory = category;
+            document.querySelectorAll('.filter-pill').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            renderProducts();
+            tg.HapticFeedback.impactOccurred('light');
         }
 
-        renderCategories();
-        renderProducts();
-    </script>
-</body>
-</html>
+        function renderProducts() {
+            const grid = document.getElementById('product-grid');
+            let filtered = currentCategory === 'All' ? products : products.filter(p => p.category === currentCategory);
+            
+            grid.innerHTML = filtered.map(p => `
+                <div class="product-card">
+                    <div>
+                        <img src="${p.image || 'https://via.placeholder.com/300'}" class="product-img">
+                        <div class="product-name">${p.name}</div>
+                    </div>
+                    <div class="product-footer">
+                        <span class="product-price">${p.price} ฿</span>
+                        <button class="btn-add" onclick="addToCart(${p.id})">+</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderAdminProducts() {
+            const manageList = document.getElementById('product-management-list');
+            if (!manageList) return;
+
+            if (products.length === 0) {
+                manageList.innerHTML = `<p style="color:var(--text-secondary); text-align:center; font-size:13px;">ไม่มีสินค้าในระบบ</p>`;
+                return;
+            }
+
+            manageList.innerHTML = products.map(p => `
+                <div class="prod-manage-item">
+                    <div class="prod-info">
+                        <img src="${p.image || 'https://via.placeholder.com/100'}" class="prod-thumb">
+                        <div>
+                            <div style="font-weight:600; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px;">${p.name}</div>
+                            <div style="color:var(--accent); font-size:12px;">${p.price} ฿ (${p.category})</div>
+                        </div>
+                    </div>
+                    <button class="btn-del-cat" onclick="deleteProduct(${p.id})">ลบ</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteProduct(id) {
+            let target = products.find(p => p.id === id);
+            if (!target) return;
+
+            if (confirm(`คุณต้องการลบสินค้า "${target.name}" ใช่หรือไม่?`)) {
+                products = products.filter(p => p.id !== id);
+                localStorage.setItem('bkk_products', JSON.stringify(products));
+                
+                if (cart[id]) {
+                    delete cart[id];
+                    updateCartUI();
+                }
+
+                renderProducts();
+                renderAdminProducts();
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+        }
+
+        function addNewProduct() {
+            let name = document.getElementById('new-name').value;
+            let price = Number(document.getElementById('new-price').value);
+            let category = document.getElementById('new-category').value;
+            let fileInput = document.getElementById('new-image-file');
+
+            if (!name || !price) return alert("กรุณากรอกชื่อและราคา");
+
+            let save = (imgBase64) => {
+                let newId = products.length > 0 ? products[products.length - 1].id + 1 : 1;
+                products.push({ id: newId, name, price, category, image: imgBase64 });
+                localStorage.setItem('bkk_products', JSON.stringify(products));
+                
+                document.getElementById('new-name').value = '';
+                document.getElementById('new-price').value = '';
+                document.getElementById('new-image-file').value = '';
+                renderProducts();
+                renderAdminProducts();
+                tg.HapticFeedback.notificationOccurred('success');
+                alert("เพิ่มสินค้าสำเร็จ!");
+      
