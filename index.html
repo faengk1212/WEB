@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
     <title>BKKPODTH Store</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -110,6 +110,178 @@
         .order-item .order-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
         .order-item .order-line { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
         .order-item .order-total { display: flex; justify-content: space-between; font-weight: 700; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
+
+        nav.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); display: flex; padding: 12px 0 calc(20px + env(safe-area-inset-bottom, 0px)) 0; justify-content: space-around; border-top: 1px solid var(--border); z-index: 100; touch-action: manipulation; }
+        .nav-item { background: none; border: none; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; font-size: 11px; gap: 4px; padding: 5px; cursor: pointer; font-weight: 500; position: relative; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        .nav-item.active { color: var(--accent); font-weight: 700; }
+        .nav-item svg { width: 22px; height: 22px; fill: currentColor; }
+        .cart-count-badge { position: absolute; top: -2px; right: 6px; background: var(--danger); color: white; font-size: 9px; font-weight: 800; min-width: 15px; height: 15px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <span class="header-title">BKKPODTH Store</span>
+        <span id="header-admin-icon" style="display:none; cursor:pointer; font-size:18px;" data-tab="admin">⚙️</span>
+    </header>
+
+    <div id="tab-catalog" class="main-content active">
+        <input type="text" id="search-box" class="search-box" placeholder="ค้นหาสินค้า..." oninput="renderProducts()">
+        <div id="category-filter-container" class="category-filter">
+            <button class="filter-pill active" onclick="filterCategory('All', this)">ทั้งหมด</button>
+        </div>
+        <div id="product-grid" class="product-grid"></div>
+    </div>
+
+    <div id="tab-cart" class="main-content">
+        <h1 class="section-title">
+            <span>ตะกร้าสินค้า</span>
+            <button class="btn-clear-cart" onclick="clearCart()">ล้างตะกร้า</button>
+        </h1>
+        <div id="cart-items-container" class="cart-container">
+            <p class="empty-state">ตะกร้าสินค้าว่างเปล่า</p>
+        </div>
+        <div id="cart-summary" style="display: none;">
+            <div style="display:flex; justify-content:space-between; font-weight:700; font-size:16px; margin-top:15px;">
+                <span>ยอดรวมทั้งสิ้น:</span>
+                <span id="total-price" style="color: var(--accent);">0 ฿</span>
+            </div>
+
+            <h3 style="font-size: 14px; margin: 18px 0 10px; color: var(--accent);">📍 ข้อมูลจัดส่ง</h3>
+            <input type="text" id="customer-name" class="admin-input" placeholder="ชื่อ-นามสกุลผู้รับ">
+            <input type="tel" id="customer-phone" class="admin-input" placeholder="เบอร์โทรติดต่อ">
+            <textarea id="customer-address" class="admin-input" rows="3" placeholder="ที่อยู่จัดส่ง (บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์)" style="resize: vertical;"></textarea>
+
+            <button class="btn-checkout" id="checkout-btn" onclick="checkout()">ยืนยันการสั่งซื้อ</button>
+        </div>
+    </div>
+
+    <div id="tab-profile" class="main-content">
+        <h1 class="section-title">โปรไฟล์</h1>
+        <div class="admin-card">
+            <p id="user-profile-info" style="color: var(--text-secondary); line-height: 1.6;">กำลังโหลด...</p>
+        </div>
+        <h2 style="font-size:14px; margin-bottom:12px; color: var(--accent);">📦 ประวัติการสั่งซื้อ</h2>
+        <div id="order-history-container"></div>
+    </div>
+
+    <div id="tab-admin" class="main-content">
+        <h1 class="section-title">Admin Panel</h1>
+
+        <div class="admin-card">
+            <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--accent);">🏷️ จัดการหมวดหมู่</h3>
+            <input type="text" id="new-category-name" class="admin-input" placeholder="ชื่อหมวดหมู่ใหม่ เช่น Snack">
+            <button class="btn-action" onclick="addNewCategory()">+ เพิ่มหมวดหมู่</button>
+            <div id="category-management-list" style="margin-top: 10px;"></div>
+        </div>
+
+        <div class="admin-card">
+            <h3 id="product-form-title" style="font-size: 14px; margin-bottom: 12px; color: var(--accent);">➕ เพิ่มสินค้าใหม่</h3>
+            <input type="hidden" id="edit-product-id" value="">
+            <input type="text" id="new-name" class="admin-input" placeholder="ชื่อสินค้า">
+            <input type="number" id="new-price" class="admin-input" placeholder="ราคา (บาท)">
+            <input type="number" id="new-stock" class="admin-input" placeholder="จำนวนสต็อก (เว้นว่าง = ไม่จำกัด)">
+            <select id="new-category" class="admin-select"></select>
+            <input type="file" id="new-image-file" class="admin-input" accept="image/*">
+            <button class="btn-action" id="product-form-submit" onclick="addNewProduct()" style="margin-top: 10px;">บันทึกเพิ่มสินค้า</button>
+            <button class="btn-secondary" id="product-form-cancel" onclick="resetProductForm()" style="display:none;">ยกเลิกการแก้ไข</button>
+        </div>
+
+        <div class="admin-card">
+            <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--accent);">📋 รายการสินค้าทั้งหมด</h3>
+            <div id="product-management-list"></div>
+        </div>
+
+        <button class="btn-danger" onclick="resetData()">รีเซ็ตค่าเริ่มต้นทั้งหมด</button>
+    </div>
+
+    <nav class="bottom-nav" id="bottom-nav">
+        <button class="nav-item active" type="button" data-tab="catalog">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Shop
+        </button>
+        <button class="nav-item" type="button" data-tab="cart">
+            <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>Cart
+            <span id="cart-count-badge" class="cart-count-badge" style="display:none;">0</span>
+        </button>
+        <button class="nav-item" type="button" data-tab="profile">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>Profile
+        </button>
+    </nav>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.ready(); tg.expand();
+        // Prevent Telegram's own swipe-to-close gesture from swallowing taps
+        // near the top/bottom edges (common cause of "buttons don't respond" on iOS).
+        if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+
+        const ADMIN_USER_ID = 5055497784;
+
+        const defaultCategories = ["Coffee", "Beverage", "Bakery"];
+        const defaultProducts = [
+            { id: 1, name: "Premium Coffee", price: 55, category: "Coffee", image: "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=300", stock: null },
+            { id: 2, name: "Matcha Latte", price: 75, category: "Beverage", image: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=300", stock: null }
+        ];
+
+        let categories = JSON.parse(localStorage.getItem('bkk_categories')) || defaultCategories;
+        let products = JSON.parse(localStorage.getItem('bkk_products')) || defaultProducts;
+        let orders = JSON.parse(localStorage.getItem('bkk_orders')) || [];
+        let cart = JSON.parse(sessionStorage.getItem('bkk_cart')) || {};
+        let currentCategory = 'All';
+
+        let user = tg.initDataUnsafe.user;
+        let isAdmin = !!(user && user.id === ADMIN_USER_ID);
+
+        if (isAdmin) {
+            document.getElementById('header-admin-icon').style.display = 'block';
+            document.getElementById('bottom-nav').insertAdjacentHTML('beforeend', `
+                <button class="nav-item" type="button" id="nav-admin-btn" data-tab="admin">
+                    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.04.64.09.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Admin
+                </button>
+            `);
+        }
+
+        if (user) {
+            document.getElementById("user-profile-info").innerHTML = `ชื่อ: <b style="color:white;">${escapeHtml(user.first_name)}</b><br>Username: @${escapeHtml(user.username || 'ไม่มี')}<br>ID: ${user.id}`;
+        } else {
+            document.getElementById("user-profile-info").innerText = "เปิดใช้งานภายนอก Telegram";
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function saveProducts() { localStorage.setItem('bkk_products', JSON.stringify(products)); }
+        function saveCategories() { localStorage.setItem('bkk_categories', JSON.stringify(categories)); }
+        function saveOrders() { localStorage.setItem('bkk_orders', JSON.stringify(orders)); }
+        function saveCart() { sessionStorage.setItem('bkk_cart', JSON.stringify(cart)); }
+
+        function stockOf(p) {
+            return (p.stock === null || p.stock === undefined || p.stock === '') ? Infinity : Number(p.stock);
+        }
+
+        function renderCategories() {
+            const filterContainer = document.getElementById('category-filter-container');
+            filterContainer.innerHTML = `<button class="filter-pill ${currentCategory === 'All' ? 'active' : ''}" onclick="filterCategory('All', this)">ทั้งหมด</button>`;
+
+            categories.forEach(cat => {
+                filterContainer.innerHTML += `<button class="filter-pill ${currentCategory === cat ? 'active' : ''}" onclick="filterCategory('${escapeHtml(cat)}', this)">${escapeHtml(cat)}</button>`;
+            });
+
+            const selectContainer = document.getElementById('new-category');
+            selectContainer.innerHTML = categories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('');
+
+            const manageList = document.getElementById('category-management-list');
+            manageList.innerHTML = categories.map(cat => `
+                <div class="cat-manage-item">
+                    <span>${escapeHtml(cat)}</span>
+                    <button class        .order-item .order-total { display: flex; justify-content: space-between; font-weight: 700; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
 
         nav.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); display: flex; padding: 12px 0 20px 0; justify-content: space-around; border-top: 1px solid var(--border); z-index: 100; }
         .nav-item { background: none; border: none; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; font-size: 11px; gap: 4px; padding: 5px; cursor: pointer; font-weight: 500; position: relative; }
