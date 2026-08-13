@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BKKPODTH Online Store</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #F8FAFC;
+            --surface-color: #FFFFFF;
+            --text-main: #0F172A;
+            --text-secondary: #64748B;
+            --primary: #2563EB;
+            --primary-light: #EFF6FF;
+            --border-color: #E2E8F0;
+            --danger: #EF4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            background-color: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header-title {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: none;
+        }
+
+        .main-content.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        /* Category Filter Pills */
+        .category-filter {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+
+        .filter-pill {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            color: var(--text-secondary);
+        }
+
+        .filter-pill.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Product Grid */
+        .product-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .product-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .product-img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 10px;
+            background: var(--primary-light);
+        }
+
+        .product-name {
+            font-size: 13px;
+            font-weight: 600;
+            height: 36px;
+            overflow: hidden;
+        }
+
+        .product-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .product-price {
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .btn-add {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* Admin & Cart Elements */
+        .admin-form {
+            background: var(--surface-color);
+            padding: 16px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .admin-input, .admin-select {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fff;
+        }
+
+        .btn-submit {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .cart-item {
+            background: var(--surface-color);
+            padding: 12px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-checkout {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+
+        /* Bottom Nav */
+        nav.bottom-nav {
+            display: flex;
+            background-color: var(--surface-color);
+            border-top: 1px solid var(--border-color);
+            padding: 8px 0 env(safe-area-inset-bottom, 8px);
+            justify-content: space-around;
+        }
+
+        .nav-item {
+            background: none;
+            border: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 11px;
+            flex: 1;
+            padding: 6px 0;
+        }
+
+        .nav-item svg { width: 22px; height: 22px; fill: currentColor; }
+        .nav-item.active { color: var(--primary); font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button style="background:none; border:none; font-size:18px;" onclick="tg.close()">✕</button>
+        <span class="header-title">BKKPODTH Store</span>
+        <span id="header-admin-icon" style="display:none; cursor:pointer; font-size:16px;" onclick="switchTab('admin', null)">⚙️</span>
+    </header>
+
+    <!-- 1. Catalog -->
+    <div id="tab-catalog" class="main-content active">
+        <h1 class="section-title">Catalog</h1>
+        <div id="category-filter-container" class="category-filter">
+            <button class="filter-pill active" onclick="filterCategory('All', this)">ทั้งหมด</button>
+            <button class="filter-pill" onclick="filterCategory('Coffee', this)">Coffee</button>
+            <button class="filter-pill" onclick="filterCategory('Beverage', this)">Beverage</button>
+            <button class="filter-pill" onclick="filterCategory('Bakery', this)">Bakery</button>
+        </div>
+        <div id="product-grid" class="product-grid"></div>
+    </div>
+
+    <!-- 2. History -->
+    <div id="tab-history" class="main-content">
+        <h1 class="section-title">History</h1>
+        <p style="color: var(--text-secondary); text-align: center; margin-top: 40px;">ยังไม่มีประวัติการสั่งซื้อ</p>
+    </div>
+
+    <!-- 3. Cart -->
+    <div id="tab-cart" class="main-content">
+        <h1 class="section-title">Cart</h1>
+        <div id="cart-items-container">
+            <p style="color: var(--text-secondary); text-align: center; margin-top: 40px;">ตะกร้าสินค้าของคุณว่างเปล่า</p>
+        </div>
+        <div id="cart-summary" style="display: none; margin-top: 20px;">
+            <hr style="border:0; border-top:1px solid var(--border-color); margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; font-weight:700; font-size:16px;">
+                <span>ยอดรวมทั้งสิ้น:</span>
+                <span id="total-price">0 ฿</span>
+            </div>
+            <button class="btn-checkout" onclick="checkout()">ยืนยันการสั่งซื้อ</button>
+        </div>
+    </div>
+
+    <!-- 4. Profile -->
+    <div id="tab-profile" class="main-content">
+        <h1 class="section-title">Profile</h1>
+        <p id="user-profile-info" style="color: var(--text-secondary);">กำลังโหลด...</p>
+    </div>
+
+    <!-- 5. Admin Panel -->
+    <div id="tab-admin" class="main-content">
+        <h1 class="section-title">Admin Panel</h1>
+        <div class="admin-form">
+            <h3 style="font-size: 15px; font-weight: 600;">➕ เพิ่มสินค้าใหม่</h3>
+            <input type="text" id="new-name" class="admin-input" placeholder="ชื่อสินค้า เช่น กาแฟสด">
+            <input type="number" id="new-price" class="admin-input" placeholder="ราคาสินค้า (บาท)">
+            
+            <select id="new-category" class="admin-select">
+                <option value="Coffee">Coffee</option>
+                <option value="Beverage">Beverage</option>
+                <option value="Bakery">Bakery</option>
+            </select>
+
+            <input type="text" id="new-image" class="admin-input" placeholder="ลิงก์รูปภาพ (เช่น https://...)">
+            <button class="btn-submit" onclick="addNewProduct()">บันทึกเพิ่มสินค้า</button>
+        </div>
+        <button style="background:var(--danger); color:white; border:none; padding:10px; border-radius:8px; width:100%; cursor:pointer;" onclick="resetProducts()">รีเซ็ตสินค้าเริ่มต้น</button>
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav" id="bottom-nav">
+        <button class="nav-item active" onclick="switchTab('catalog', this)">
+            <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+            Catalog
+        </button>
+        <button class="nav-item" onclick="switchTab('history', this)">
+            <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+            History
+        </button>
+        <button class="nav-item" onclick="switchTab('cart', this)">
+            <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+            Cart
+        </button>
+        <button class="nav-item" onclick="switchTab('profile', this)">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+            Profile
+        </button>
+        <!-- ปุ่ม Admin ด้านล่างจะถูกซ่อนไว้โดยอัตโนมัติสำหรับลูกค้าทั่วไป -->
+    </nav>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // 🛑 ใส่ Telegram User ID ของคุณที่นี่ (ตัวเลขไอดีแอดมิน)
+        const ADMIN_USER_ID = 5055497784; 
+
+        const defaultProducts = [
+            { id: 1, name: "กาแฟดำเย็น (Iced Americano)", price: 55, category: "Coffee", image: "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=300" },
+            { id: 2, name: "ชาเขียวมัทฉะ (Matcha Latte)", price: 75, category: "Beverage", image: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=300" }
+        ];
+
+        let products = JSON.parse(localStorage.getItem('bkk_products')) || defaultProducts;
+        let cart = {};
+        let currentCategory = 'All';
+
+        // ตรวจสอบสิทธิ์ว่าใช่แอดมินหรือไม่
+        let user = tg.initDataUnsafe.user;
+        if (user && user.id === ADMIN_USER_ID) {
+            // หากเป็นแอดมิน ให้แสดงปุ่มเมนู Admin เพิ่มขึ้นมาที่แถบด้านล่าง
+            const bottomNav = document.getElementById('bottom-nav');
+            bottomNav.innerHTML += `
+                <button class="nav-item" onclick="switchTab('admin', this)">
+                    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.04.64.09.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c-.5.38-1.03.7-1.62.94l.36 2.54c-.05.24.24.41.48.41h3.84c-.24 0 .44-.17.47-.41l.36-2.54c-.59-.24-1.13-.56-1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c-.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                    Admin
+                </button>
+            `;
+            document.getElementById('header-admin-icon').style.display = 'block';
+        }
+
+        function filterCategory(category, element) {
+            currentCategory = category;
+            document.querySelectorAll('.filter-pill').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            renderProducts();
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = "";
+
+            let filteredProducts = currentCategory === 'All' 
+                ? products 
+                : products.filter(p => p.category === currentCategory);
+
+            filteredProducts.forEach(p => {
+                let imgSrc = p.image ? p.image : "https://via.placeholder.com/300x200?text=No+Image";
+                grid.innerHTML += `
+                    <div class="product-card">
+                        <img src="${imgSrc}" class="product-img" alt="${p.name}">
+                        <div class="product-name">${p.name}</div>
+                        <div class="product-footer">
+                            <span class="product-price">${p.price} ฿</span>
+                            <button class="btn-add" onclick="addToCart(${p.id})">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function addNewProduct() {
+            let name = document.getElementById('new-name').value;
+            let price = Number(document.getElementById('new-price').value);
+            let category = document.getElementById('new-category').value;
+            let image = document.getElementById('new-image').value;
+
+            if (!name || !price) {
+                alert("กรุณากรอกชื่อและราคาสินค้าให้ครบถ้วน");
+                return;
+            }
+
+            let newId = products.length > 0 ? products[products.length - 1].id + 1 : 1;
+            products.push({ id: newId, name: name, price: price, category: category, image: image });
+            
+            localStorage.setItem('bkk_products', JSON.stringify(products));
+
+            document.getElementById('new-name').value = '';
+            document.getElementById('new-price').value = '';
+            document.getElementById('new-image').value = '';
+
+            renderProducts();
+            alert("เพิ่มสินค้าสำเร็จ!");
+            switchTab('catalog', document.querySelectorAll('.nav-item')[0]);
+        }
+
+        function resetProducts() {
+            if (confirm("ต้องการรีเซ็ตสินค้าเป็นค่าเริ่มต้นใช่หรือไม่?")) {
+                localStorage.removeItem('bkk_products');
+                products = defaultProducts;
+                renderProducts();
+                alert("รีเซ็ตเรียบร้อย");
+            }
+        }
+
+        function addToCart(productId) {
+            cart[productId] = (cart[productId] || 0) + 1;
+            tg.HapticFeedback.impactOccurred('light');
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const container = document.getElementById('cart-items-container');
+            const summary = document.getElementById('cart-summary');
+            const totalPriceEl = document.getElementById('total-price');
+            
+            container.innerHTML = "";
+            let total = 0, hasItem = false;
+
+            for (let id in cart) {
+                if (cart[id] > 0) {
+                    hasItem = true;
+                    let product = products.find(p => p.id == id);
+                    if (!product) continue;
+                    let subtotal = product.price * cart[id];
+                    total += subtotal;
+
+                    container.innerHTML += `
+                        <div class="cart-item">
+                            <div>
+                                <div style="font-weight: 600; font-size: 14px;">${product.name}</div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">${product.price} ฿ x ${cart[id]}</div>
+                            </div>
+                            <div style="font-weight: 700; color: var(--primary);">${subtotal} ฿</div>
+                        </div>
+                    `;
+                }
+            }
+
+            if (!hasItem) {
+                container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; margin-top: 40px;">ตะกร้าสินค้าของคุณว่างเปล่า</p>`;
+                summary.style.display = 'none';
+            } else {
+                summary.style.display = 'block';
+                totalPriceEl.innerText = total + " ฿";
+            }
+        }
+
+        function checkout() {
+            tg.showAlert("สั่งซื้อสินค้าสำเร็จ! ขอบคุณครับ 🎉");
+            cart = {};
+            updateCartUI();
+            switchTab('catalog', document.querySelectorAll('.nav-item')[0]);
+        }
+
+        if (user) {
+            document.getElementById("user-profile-info").innerHTML = `ชื่อ: <b>${user.first_name}</b><br>Username: @${user.username || 'ไม่มี'}<br>ID: ${user.id}`;
+        } else {
+            document.getElementById("user-profile-info").innerText = "เปิดใช้งานภายนอก Telegram";
+        }
+
+        function switchTab(tabName, element) {
+            document.querySelectorAll('.main-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            if (element) element.classList.add('active');
+        }
+
+        renderProducts();
+    </script>
+</body>
+</html>
