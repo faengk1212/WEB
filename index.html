@@ -362,6 +362,191 @@
         }
 
         function switchTab(tab, el) {
+            document.querySelectorAll('.main-content').forEach(c => c.classList.r        let categories = JSON.parse(localStorage.getItem('bkk_categories')) || defaultCategories;
+        let products = JSON.parse(localStorage.getItem('bkk_products')) || defaultProducts;
+        let cart = {};
+        let currentCategory = 'All';
+
+        let user = tg.initDataUnsafe.user;
+        if (user && user.id === ADMIN_USER_ID) {
+            document.getElementById('header-admin-icon').style.display = 'block';
+            document.getElementById('bottom-nav').innerHTML += `
+                <button class="nav-item" id="nav-admin-btn" onclick="switchTab('admin', this)">
+                    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.04.64.09.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c-.5.38-1.03.7-1.62.94l.36 2.54c-.05.24.24.41.48.41h3.84c-.24 0 .44-.17.47-.41l.36-2.54c-.59-.24-1.13-.56-1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c-.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Admin
+                </button>
+            `;
+        }
+
+        if (user) {
+            document.getElementById("user-profile-info").innerHTML = `ชื่อ: <b style="color:white;">${user.first_name}</b><br>Username: @${user.username || 'ไม่มี'}<br>ID: ${user.id}`;
+        } else {
+            document.getElementById("user-profile-info").innerText = "เปิดใช้งานภายนอก Telegram";
+        }
+
+        function renderCategories() {
+            const filterContainer = document.getElementById('category-filter-container');
+            filterContainer.innerHTML = `<button class="filter-pill ${currentCategory === 'All' ? 'active' : ''}" onclick="filterCategory('All', this)">ทั้งหมด</button>`;
+            
+            categories.forEach(cat => {
+                filterContainer.innerHTML += `<button class="filter-pill ${currentCategory === cat ? 'active' : ''}" onclick="filterCategory('${cat}', this)">${cat}</button>`;
+            });
+
+            const selectContainer = document.getElementById('new-category');
+            selectContainer.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+
+            const manageList = document.getElementById('category-management-list');
+            manageList.innerHTML = categories.map(cat => `
+                <div class="cat-manage-item">
+                    <span>${cat}</span>
+                    <button class="btn-del-cat" onclick="deleteCategory('${cat}')">ลบ</button>
+                </div>
+            `).join('');
+        }
+
+        function addNewCategory() {
+            let catName = document.getElementById('new-category-name').value.trim();
+            if (!catName) return alert("กรุณากรอกชื่อหมวดหมู่");
+            if (categories.includes(catName)) return alert("มีหมวดหมู่นี้อยู่แล้ว");
+
+            categories.push(catName);
+            localStorage.setItem('bkk_categories', JSON.stringify(categories));
+            document.getElementById('new-category-name').value = '';
+            renderCategories();
+            tg.HapticFeedback.notificationOccurred('success');
+            alert("เพิ่มหมวดหมู่สำเร็จ!");
+        }
+
+        function deleteCategory(catName) {
+            if (categories.length <= 1) {
+                return alert("ต้องเหลือหมวดหมู่อย่างน้อย 1 หมวดหมู่");
+            }
+            if (confirm(`คุณต้องการลบหมวดหมู่ "${catName}" ใช่หรือไม่?`)) {
+                categories = categories.filter(c => c !== catName);
+                localStorage.setItem('bkk_categories', JSON.stringify(categories));
+
+                products.forEach(p => {
+                    if (p.category === catName) {
+                        p.category = categories[0];
+                    }
+                });
+                localStorage.setItem('bkk_products', JSON.stringify(products));
+
+                if (currentCategory === catName) {
+                    currentCategory = 'All';
+                }
+
+                renderCategories();
+                renderProducts();
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+        }
+
+        function filterCategory(category, element) {
+            currentCategory = category;
+            document.querySelectorAll('.filter-pill').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            renderProducts();
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('product-grid');
+            let filtered = currentCategory === 'All' ? products : products.filter(p => p.category === currentCategory);
+            
+            grid.innerHTML = filtered.map(p => `
+                <div class="product-card">
+                    <div>
+                        <img src="${p.image || 'https://via.placeholder.com/300'}" class="product-img">
+                        <div class="product-name">${p.name}</div>
+                    </div>
+                    <div class="product-footer">
+                        <span class="product-price">${p.price} ฿</span>
+                        <button class="btn-add" onclick="addToCart(${p.id})">+</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addNewProduct() {
+            let name = document.getElementById('new-name').value;
+            let price = Number(document.getElementById('new-price').value);
+            let category = document.getElementById('new-category').value;
+            let fileInput = document.getElementById('new-image-file');
+
+            if (!name || !price) return alert("กรุณากรอกชื่อและราคา");
+
+            let save = (imgBase64) => {
+                let newId = products.length > 0 ? products[products.length - 1].id + 1 : 1;
+                products.push({ id: newId, name, price, category, image: imgBase64 });
+                localStorage.setItem('bkk_products', JSON.stringify(products));
+                
+                document.getElementById('new-name').value = '';
+                document.getElementById('new-price').value = '';
+                document.getElementById('new-image-file').value = '';
+                renderProducts();
+                tg.HapticFeedback.notificationOccurred('success');
+                alert("เพิ่มสินค้าสำเร็จ!");
+                switchTab('catalog', document.querySelectorAll('.nav-item')[0]);
+            };
+
+            if (fileInput.files && fileInput.files[0]) {
+                let reader = new FileReader();
+                reader.onload = (e) => save(e.target.result);
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                save("");
+            }
+        }
+
+        function addToCart(id) {
+            cart[id] = (cart[id] || 0) + 1;
+            tg.HapticFeedback.impactOccurred('medium');
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const container = document.getElementById('cart-items-container');
+            const summary = document.getElementById('cart-summary');
+            let total = 0, hasItem = false;
+
+            container.innerHTML = Object.keys(cart).map(id => {
+                if (cart[id] > 0) {
+                    hasItem = true;
+                    let p = products.find(x => x.id == id);
+                    if(!p) return '';
+                    let sub = p.price * cart[id];
+                    total += sub;
+                    return `<div class="cart-item"><div><b style="color:white;">${p.name}</b><br><span style="font-size:12px;color:var(--text-secondary);">${p.price} x ${cart[id]}</span></div><b style="color:var(--accent);">${sub} ฿</b></div>`;
+                }
+                return '';
+            }).join('');
+
+            if (!hasItem) {
+                container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; margin-top: 40px;">ตะกร้าสินค้าว่างเปล่า</p>`;
+                summary.style.display = 'none';
+            } else {
+                summary.style.display = 'block';
+                document.getElementById('total-price').innerText = total + " ฿";
+            }
+        }
+
+        function checkout() {
+            tg.HapticFeedback.notificationOccurred('success');
+            tg.showAlert("สั่งซื้อสำเร็จ! (นี่คือระบบจำลอง)");
+            cart = {};
+            updateCartUI();
+            switchTab('catalog', document.querySelectorAll('.nav-item')[0]);
+        }
+
+        function resetData() {
+            if(confirm("รีเซ็ตข้อมูลทั้งหมด?")) {
+                localStorage.removeItem('bkk_products');
+                localStorage.removeItem('bkk_categories');
+                location.reload();
+            }
+        }
+
+        function switchTab(tab, el) {
             document.querySelectorAll('.main-content').forEach(c => c.classList.r            <button class="btn-action" onclick="addNewCategory()" style="margin-bottom: 14px;">เพิ่มหมวดหมู่</button>
             <div id="category-management-list"></div>
         </div>
