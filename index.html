@@ -93,7 +93,8 @@
 
     <header>
         <span class="header-title">BKKPODTH Store</span>
-        <span id="header-admin-icon" style="display:none; cursor:pointer; font-size:18px;" onclick="switchTab('admin', document.getElementById('nav-admin-btn'))">⚙️</span>
+        <!-- แก้ไขตรงนี้: ส่งตัว this ไปด้วยเพื่อให้ฟังก์ชันทำงานได้ถูกต้อง -->
+        <span id="header-admin-icon" style="display:none; cursor:pointer; font-size:18px;" onclick="switchTab('admin', this)">⚙️</span>
     </header>
 
     <!-- 1. Catalog -->
@@ -181,7 +182,9 @@
         let currentCategory = 'All';
 
         let user = tg.initDataUnsafe.user;
-        if (user && user.id === ADMIN_USER_ID) {
+        let isAdmin = user && user.id === ADMIN_USER_ID;
+
+        if (isAdmin) {
             document.getElementById('header-admin-icon').style.display = 'block';
             document.getElementById('bottom-nav').innerHTML += `
                 <button class="nav-item" id="nav-admin-btn" onclick="switchTab('admin', this)">
@@ -289,7 +292,7 @@
             if (!name || !price) return alert("กรุณากรอกชื่อและราคา");
 
             let save = (imgBase64) => {
-                let newId = products.length > 0 ? products[products.length - 1].id + 1 : 1;
+                let newId = products.length > 0 ? Number(products[products.length - 1].id) + 1 : 1;
                 products.push({ id: newId, name, price, category, image: imgBase64 });
                 localStorage.setItem('bkk_products', JSON.stringify(products));
                 
@@ -327,7 +330,7 @@
             for (let id in cart) {
                 if (cart[id] > 0) {
                     hasItem = true;
-                    let p = products.find(x => x.id == id);
+                    let p = products.find(x => Number(x.id) === Number(id));
                     if (p) {
                         let sub = p.price * cart[id];
                         total += sub;
@@ -374,7 +377,13 @@
             document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('tab-' + tab).classList.add('active');
-            if(el) el.classList.add('active');
+            
+            if (el) {
+                el.classList.add('active');
+            } else if (tab === 'admin' && isAdmin) {
+                const adminNavBtn = document.getElementById('nav-admin-btn');
+                if (adminNavBtn) adminNavBtn.classList.add('active');
+            }
         }
 
         renderCategories();
