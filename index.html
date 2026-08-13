@@ -33,12 +33,15 @@
 
         /* Grid */
         .product-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .product-card { background: var(--surface); border-radius: 20px; padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; }
+        .product-card { background: var(--surface); border-radius: 20px; padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; position: relative; }
         .product-img { width: 100%; height: 110px; object-fit: cover; border-radius: 14px; margin-bottom: 10px; background: #334155; }
         .product-name { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
         .product-footer { display: flex; justify-content: space-between; align-items: center; }
         .product-price { color: var(--accent); font-weight: 700; font-size: 14px; }
         .btn-add { background: var(--accent); color: var(--bg); border: none; width: 32px; height: 32px; border-radius: 10px; font-weight: 800; cursor: pointer; }
+        
+        /* Admin Product Delete Button */
+        .btn-del-product { background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; margin-top: 8px; width: 100%; }
 
         /* Admin & Forms */
         .admin-card { background: var(--surface); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 16px; }
@@ -93,7 +96,6 @@
 
     <header>
         <span class="header-title">BKKPODTH Store</span>
-        <!-- แก้ไขตรงนี้: ส่งตัว this ไปด้วยเพื่อให้ฟังก์ชันทำงานได้ถูกต้อง -->
         <span id="header-admin-icon" style="display:none; cursor:pointer; font-size:18px;" onclick="switchTab('admin', this)">⚙️</span>
     </header>
 
@@ -275,9 +277,12 @@
                         <img src="${p.image || 'https://via.placeholder.com/300'}" class="product-img">
                         <div class="product-name">${p.name}</div>
                     </div>
-                    <div class="product-footer">
-                        <span class="product-price">${p.price} ฿</span>
-                        <button class="btn-add" onclick="addToCart(${p.id})">+</button>
+                    <div>
+                        <div class="product-footer">
+                            <span class="product-price">${p.price} ฿</span>
+                            <button class="btn-add" onclick="addToCart(${p.id})">+</button>
+                        </div>
+                        ${isAdmin ? `<button class="btn-del-product" onclick="deleteProduct(${p.id})">ลบสินค้า</button>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -311,6 +316,25 @@
                 reader.readAsDataURL(fileInput.files[0]);
             } else {
                 save("");
+            }
+        }
+
+        function deleteProduct(id) {
+            let p = products.find(x => Number(x.id) === Number(id));
+            if (!p) return;
+
+            if (confirm(`คุณต้องการลบสินค้า "${p.name}" ใช่หรือไม่?`)) {
+                products = products.filter(x => Number(x.id) !== Number(id));
+                localStorage.setItem('bkk_products', JSON.stringify(products));
+                
+                // ลบออกจากตะกร้าถ้ามีสินค้าตัวนี้ค้างอยู่
+                if (cart[id]) {
+                    delete cart[id];
+                    updateCartUI();
+                }
+
+                renderProducts();
+                tg.HapticFeedback.notificationOccurred('success');
             }
         }
 
