@@ -290,7 +290,9 @@
                 <option value="Bakery">Bakery</option>
             </select>
 
-            <input type="text" id="new-image" class="admin-input" placeholder="ลิงก์รูปภาพ (เช่น https://...)">
+            <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">เลือกรูปภาพจากเครื่อง:</label>
+            <input type="file" id="new-image-file" class="admin-input" accept="image/*">
+            
             <button class="btn-submit" onclick="addNewProduct()">บันทึกเพิ่มสินค้า</button>
         </div>
         <button style="background:var(--danger); color:white; border:none; padding:10px; border-radius:8px; width:100%; cursor:pointer;" onclick="resetProducts()">รีเซ็ตสินค้าเริ่มต้น</button>
@@ -314,7 +316,6 @@
             <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
             Profile
         </button>
-        <!-- ปุ่ม Admin ด้านล่างจะถูกซ่อนไว้โดยอัตโนมัติสำหรับลูกค้าทั่วไป -->
     </nav>
 
     <script>
@@ -322,7 +323,6 @@
         tg.ready();
         tg.expand();
 
-        // 🛑 ใส่ Telegram User ID ของคุณที่นี่ (ตัวเลขไอดีแอดมิน)
         const ADMIN_USER_ID = 5055497784; 
 
         const defaultProducts = [
@@ -334,10 +334,8 @@
         let cart = {};
         let currentCategory = 'All';
 
-        // ตรวจสอบสิทธิ์ว่าใช่แอดมินหรือไม่
         let user = tg.initDataUnsafe.user;
         if (user && user.id === ADMIN_USER_ID) {
-            // หากเป็นแอดมิน ให้แสดงปุ่มเมนู Admin เพิ่มขึ้นมาที่แถบด้านล่าง
             const bottomNav = document.getElementById('bottom-nav');
             bottomNav.innerHTML += `
                 <button class="nav-item" onclick="switchTab('admin', this)">
@@ -382,25 +380,37 @@
             let name = document.getElementById('new-name').value;
             let price = Number(document.getElementById('new-price').value);
             let category = document.getElementById('new-category').value;
-            let image = document.getElementById('new-image').value;
+            let fileInput = document.getElementById('new-image-file');
 
             if (!name || !price) {
                 alert("กรุณากรอกชื่อและราคาสินค้าให้ครบถ้วน");
                 return;
             }
 
-            let newId = products.length > 0 ? products[products.length - 1].id + 1 : 1;
-            products.push({ id: newId, name: name, price: price, category: category, image: image });
-            
-            localStorage.setItem('bkk_products', JSON.stringify(products));
+            let saveProductData = (imageBase64) => {
+                let newId = products.length > 0 ? products[products.length - 1].id + 1 : 1;
+                products.push({ id: newId, name: name, price: price, category: category, image: imageBase64 });
+                
+                localStorage.setItem('bkk_products', JSON.stringify(products));
 
-            document.getElementById('new-name').value = '';
-            document.getElementById('new-price').value = '';
-            document.getElementById('new-image').value = '';
+                document.getElementById('new-name').value = '';
+                document.getElementById('new-price').value = '';
+                document.getElementById('new-image-file').value = '';
 
-            renderProducts();
-            alert("เพิ่มสินค้าสำเร็จ!");
-            switchTab('catalog', document.querySelectorAll('.nav-item')[0]);
+                renderProducts();
+                alert("เพิ่มสินค้าสำเร็จ!");
+                switchTab('catalog', document.querySelectorAll('.nav-item')[0]);
+            };
+
+            if (fileInput.files && fileInput.files[0]) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    saveProductData(e.target.result);
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                saveProductData("");
+            }
         }
 
         function resetProducts() {
