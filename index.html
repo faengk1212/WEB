@@ -40,9 +40,6 @@
         .product-price { color: var(--accent); font-weight: 700; font-size: 14px; }
         .btn-add { background: var(--accent); color: var(--bg); border: none; width: 32px; height: 32px; border-radius: 10px; font-weight: 800; cursor: pointer; }
         
-        /* Admin Product Delete Button */
-        .btn-del-product { background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; margin-top: 8px; width: 100%; }
-
         /* Admin & Forms */
         .admin-card { background: var(--surface); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 16px; }
         .admin-input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px; border: 1px solid var(--border); background: #0F172A; color: white; font-size: 14px; outline: none; }
@@ -77,8 +74,8 @@
         .btn-action { background: var(--accent); color: var(--bg); border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; margin-bottom: 12px; }
         .btn-danger { background: var(--danger); color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; }
         
-        .cat-manage-item { display: flex; justify-content: space-between; align-items: center; background: #0F172A; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); font-size: 14px; font-weight: 600; }
-        .btn-del-cat { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
+        .cat-manage-item, .prod-manage-item { display: flex; justify-content: space-between; align-items: center; background: #0F172A; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); font-size: 14px; font-weight: 600; }
+        .btn-del-item { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
 
         /* Cart & Profile */
         .cart-container { display: flex; flex-direction: column; gap: 8px; }
@@ -139,6 +136,11 @@
             <input type="text" id="new-category-name" class="admin-input" placeholder="ชื่อหมวดหมู่ใหม่ เช่น Snack">
             <button class="btn-action" onclick="addNewCategory()">+ เพิ่มหมวดหมู่</button>
             <div id="category-management-list" style="margin-top: 10px;"></div>
+        </div>
+
+        <div class="admin-card">
+            <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--accent);">📦 จัดการรายการสินค้า (ลบสินค้า)</h3>
+            <div id="product-management-list"></div>
         </div>
 
         <div class="admin-card">
@@ -216,7 +218,24 @@
             manageList.innerHTML = categories.map(cat => `
                 <div class="cat-manage-item">
                     <span>${cat}</span>
-                    <button class="btn-del-cat" onclick="deleteCategory('${cat}')">ลบ</button>
+                    <button class="btn-del-item" onclick="deleteCategory('${cat}')">ลบ</button>
+                </div>
+            `).join('');
+        }
+
+        function renderAdminProducts() {
+            const productManageList = document.getElementById('product-management-list');
+            if (products.length === 0) {
+                productManageList.innerHTML = `<p style="color: var(--text-secondary); font-size: 13px; text-align: center;">ไม่มีสินค้าในระบบ</p>`;
+                return;
+            }
+            productManageList.innerHTML = products.map(p => `
+                <div class="prod-manage-item">
+                    <div>
+                        <span style="color: white;">${p.name}</span><br>
+                        <span style="font-size: 11px; color: var(--accent);">${p.price} ฿ (${p.category})</span>
+                    </div>
+                    <button class="btn-del-item" onclick="deleteProduct(${p.id})">ลบ</button>
                 </div>
             `).join('');
         }
@@ -255,6 +274,7 @@
 
                 renderCategories();
                 renderProducts();
+                renderAdminProducts();
                 tg.HapticFeedback.notificationOccurred('success');
             }
         }
@@ -277,12 +297,9 @@
                         <img src="${p.image || 'https://via.placeholder.com/300'}" class="product-img">
                         <div class="product-name">${p.name}</div>
                     </div>
-                    <div>
-                        <div class="product-footer">
-                            <span class="product-price">${p.price} ฿</span>
-                            <button class="btn-add" onclick="addToCart(${p.id})">+</button>
-                        </div>
-                        ${isAdmin ? `<button class="btn-del-product" onclick="deleteProduct(${p.id})">ลบสินค้า</button>` : ''}
+                    <div class="product-footer">
+                        <span class="product-price">${p.price} ฿</span>
+                        <button class="btn-add" onclick="addToCart(${p.id})">+</button>
                     </div>
                 </div>
             `).join('');
@@ -305,6 +322,7 @@
                 document.getElementById('new-price').value = '';
                 document.getElementById('new-image-file').value = '';
                 renderProducts();
+                renderAdminProducts();
                 tg.HapticFeedback.notificationOccurred('success');
                 alert("เพิ่มสินค้าสำเร็จ!");
                 switchTab('catalog', document.querySelectorAll('.nav-item')[0]);
@@ -327,13 +345,13 @@
                 products = products.filter(x => Number(x.id) !== Number(id));
                 localStorage.setItem('bkk_products', JSON.stringify(products));
                 
-                // ลบออกจากตะกร้าถ้ามีสินค้าตัวนี้ค้างอยู่
                 if (cart[id]) {
                     delete cart[id];
                     updateCartUI();
                 }
 
                 renderProducts();
+                renderAdminProducts();
                 tg.HapticFeedback.notificationOccurred('success');
             }
         }
@@ -412,6 +430,7 @@
 
         renderCategories();
         renderProducts();
+        renderAdminProducts();
     </script>
 </body>
 </html>
