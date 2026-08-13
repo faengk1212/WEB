@@ -82,11 +82,13 @@
         .cart-item { background: var(--surface); padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); }
         .btn-checkout { background: var(--accent); color: var(--bg); border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 700; margin-top: 20px; cursor: pointer; }
 
-        /* Bottom Nav */
+        /* Bottom Nav & Badge */
         nav.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); display: flex; padding: 12px 0 20px 0; justify-content: space-around; border-top: 1px solid var(--border); z-index: 100; }
-        .nav-item { background: none; border: none; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; font-size: 11px; gap: 4px; padding: 5px; cursor: pointer; font-weight: 500; }
+        .nav-item { background: none; border: none; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; font-size: 11px; gap: 4px; padding: 5px; cursor: pointer; font-weight: 500; position: relative; }
         .nav-item.active { color: var(--accent); font-weight: 700; }
         .nav-item svg { width: 22px; height: 22px; fill: currentColor; }
+        
+        .cart-badge { position: absolute; top: 2px; right: 22%; background: var(--danger); color: white; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -161,6 +163,7 @@
             <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Shop
         </button>
         <button class="nav-item" onclick="switchTab('cart', this)">
+            <span id="cart-badge" class="cart-badge">0</span>
             <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>Cart
         </button>
         <button class="nav-item" onclick="switchTab('profile', this)">
@@ -360,18 +363,26 @@
             cart[id] = (cart[id] || 0) + 1;
             tg.HapticFeedback.impactOccurred('medium');
             updateCartUI();
+
+            let p = products.find(x => Number(x.id) === Number(id));
+            if (p) {
+                tg.showAlert(`เพิ่ม "${p.name}" ลงในตะกร้าแล้ว (จำนวน: ${cart[id]})`);
+            }
         }
 
         function updateCartUI() {
             const container = document.getElementById('cart-items-container');
             const summary = document.getElementById('cart-summary');
+            const badge = document.getElementById('cart-badge');
             let total = 0;
+            let totalCount = 0;
             let htmlContent = '';
             let hasItem = false;
 
             for (let id in cart) {
                 if (cart[id] > 0) {
                     hasItem = true;
+                    totalCount += cart[id];
                     let p = products.find(x => Number(x.id) === Number(id));
                     if (p) {
                         let sub = p.price * cart[id];
@@ -387,6 +398,13 @@
                         `;
                     }
                 }
+            }
+
+            if (totalCount > 0) {
+                badge.innerText = totalCount;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
             }
 
             if (!hasItem) {
@@ -431,6 +449,7 @@
         renderCategories();
         renderProducts();
         renderAdminProducts();
+        updateCartUI();
     </script>
 </body>
 </html>
